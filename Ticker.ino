@@ -1,119 +1,132 @@
 
+// -----------------------------------------------
+//
+// my program here
+//
+// -----------------------------------------------
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
+#include <SPI.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+// #include <ArduinoJson.h>
 
-//------- Install From Library Manager -------
-#include <ArduinoJson.h>
+String answer;
+String jsonAnswer;
+// StaticJsonBuffer<200> jsonBuffer;
+	
+static const unsigned char PROGMEM Bitcoin48[] = {
+0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+0x0F, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFE, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0x80, 0x00,
+0x00, 0x07, 0xFF, 0xFF, 0xE0, 0x00, 0x00, 0x0F, 0xFF, 0xFF, 0xF0, 0x00, 0x00, 0x1F, 0xFF, 0xFF,
+0xF8, 0x00, 0x00, 0x3F, 0xF1, 0x8F, 0xFC, 0x00, 0x00, 0x7F, 0xF1, 0x8F, 0xFE, 0x00, 0x00, 0xFF,
+0xF1, 0x8F, 0xFF, 0x00, 0x00, 0xFF, 0x80, 0x03, 0xFF, 0x00, 0x01, 0xFF, 0x80, 0x01, 0xFF, 0x80,
+0x01, 0xFF, 0x80, 0x00, 0xFF, 0x80, 0x03, 0xFF, 0x87, 0xF0, 0xFF, 0xC0, 0x03, 0xFF, 0x87, 0xF8,
+0xFF, 0xC0, 0x03, 0xFF, 0x87, 0xF8, 0xFF, 0xC0, 0x07, 0xFF, 0x87, 0xF8, 0xFF, 0xE0, 0x07, 0xFF,
+0x87, 0xF0, 0xFF, 0xE0, 0x07, 0xFF, 0x80, 0x01, 0xFF, 0xE0, 0x07, 0xFF, 0x80, 0x03, 0xFF, 0xE0,
+0x07, 0xFF, 0x80, 0x01, 0xFF, 0xE0, 0x07, 0xFF, 0x87, 0xF0, 0xFF, 0xE0, 0x07, 0xFF, 0x87, 0xF8,
+0xFF, 0xE0, 0x07, 0xFF, 0x87, 0xF8, 0x7F, 0xE0, 0x07, 0xFF, 0x87, 0xF8, 0x7F, 0xC0, 0x03, 0xFF,
+0x87, 0xF8, 0x7F, 0xC0, 0x03, 0xFF, 0x87, 0xF0, 0xFF, 0xC0, 0x03, 0xFF, 0x80, 0x00, 0xFF, 0x80,
+0x01, 0xFF, 0x80, 0x01, 0xFF, 0x80, 0x01, 0xFF, 0x80, 0x03, 0xFF, 0x00, 0x00, 0xFF, 0xF1, 0x8F,
+0xFF, 0x00, 0x00, 0x7F, 0xF1, 0x8F, 0xFE, 0x00, 0x00, 0x3F, 0xF1, 0x8F, 0xFC, 0x00, 0x00, 0x1F,
+0xFF, 0xFF, 0xF8, 0x00, 0x00, 0x0F, 0xFF, 0xFF, 0xF0, 0x00, 0x00, 0x07, 0xFF, 0xFF, 0xE0, 0x00,
+0x00, 0x01, 0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x0F, 0xF0,
+0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
 
 
-//------- Replace the following! ------
-char ssid[] = "SSID";       // your network SSID (name)
-char password[] = "PASSWORD";  // your network key
+#define TFT_CS     15
+#define TFT_DC     2
 
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC);
 
-WiFiClient client;
-CoinMarketCapApi api(client);
+const char* ssid = "Chou_Home";
+const char* password = "10201020";
+const char* host = "api.coindesk.com";
 
-// CoinMarketCap's limit is "no more than 10 per minute"
-// Make sure to factor in if you are requesting more than one coin.
-unsigned long api_mtbs = 60000; //mean time between api requests
-unsigned long api_due_time = 0;
+int jsonIndex;
 
-void setup() {
-
-  Serial.begin(115200);
-
-  // Set WiFi to station mode and disconnect from an AP if it was Previously
-  // connected
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  delay(100);
-
-  // Attempt to connect to Wifi network:
-  Serial.print("Connecting Wifi: ");
-  Serial.println(ssid);
+void setup()
+{
+  tft.initR(INITR_BLACKTAB);   
+  tft.fillScreen(ST7735_BLACK);
+  tft.setTextWrap(false);
+  
+  tft.setCursor(0, 10);
+  tft.setTextSize(1);
+  tft.println("Connecting to");
+  tft.println(" ");
+  tft.println(ssid);
+  tft.println(" ");
+   
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
+    tft.print(".");
   }
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  IPAddress ip = WiFi.localIP();
-  Serial.println(ip);
+  tft.println(" ");
+  tft.println("==> connected");
 }
 
-void printTickerData(String ticker) {
-  Serial.println("---------------------------------");
-  Serial.println("Getting ticker data for " + ticker);
 
+void loop()
+{
+  WiFiClient client;
 
-  // Ticker unfortunately is not the symbol for some reason.
-  // Go to CoinMarketCap.com and select the coin you would like to check
-  // The ticker name makes up the last part of the URL
-  // e.g: http://coinmarketcap.com/currencies/bitcoin/ , "bitcoin" is the ticker value
+  // tft.printf("\n[Connecting to %s ... ", host);
+  if (client.connect(host, 80))
+  {
+    // tft.println("connected]");
 
-  // Currency is optional, so you can pass only ticker if you want.
-  // Check out the currency drop down on CoinMarketCap.com to get available values
-  CMCTickerResponse response = api.GetTickerInfo(ticker, "eur");
-  if (response.error == "") {
-    Serial.print("ID: ");
-    Serial.println(response.id);
-    Serial.print("Name: ");
-    Serial.println(response.name);
-    Serial.print("Symbol: ");
-    Serial.println(response.symbol);
+    // tft.println("[Sending a request]");
+    client.print(String("GET /") + String("/v1/bpi/currentprice.json") + " HTTP/1.1\r\n" +
+                 "Host: " + host + "\r\n" +
+                 "Connection: close\r\n" +
+                 "\r\n"
+                );
 
-    Serial.print("Rank: ");
-    Serial.println(response.rank);
+    // tft.println("[Response:]");
+	answer="";
+    while (client.connected())
+    {
+      if (client.available())
+      {
+        String line = client.readStringUntil('\n');
+        answer += line;
+      }
+    }
+    client.stop();
+    // tft.println("\n[Disconnected]");
+ 
+    for (int i = 0; i < answer.length(); i++) { if (answer[i] == '{') { jsonIndex = i; break; }}
+    jsonAnswer = answer.substring(jsonIndex);
+    jsonAnswer.trim();
 
-    Serial.print("Price in USD: ");
-    Serial.println(response.price_usd);
-    Serial.print("Price in BTC: ");
-    Serial.println(response.price_btc);
+        int rateIndex = jsonAnswer.indexOf("rate_float");
+        String priceString = jsonAnswer.substring(rateIndex + 12, rateIndex + 18);
+        priceString.trim();
+        float price = priceString.toFloat();
 
-    Serial.print("24h Volume USD: ");
-    Serial.println(response.volume_usd_24h);
-    Serial.print("Market Cap USD: ");
-    Serial.println(response.market_cap_usd);
+        tft.fillScreen(ST7735_BLACK);
 
-    Serial.print("Available Supply: ");
-    Serial.println(response.available_supply);
-    Serial.print("Total Supply: ");
-    Serial.println(response.total_supply);
-
-    Serial.print("Percent Change 1h: ");
-    Serial.println(response.percent_change_1h);
-    Serial.print("Percent Change 24h: ");
-    Serial.println(response.percent_change_24h);
-    Serial.print("Percent Change 7d: ");
-    Serial.println(response.percent_change_7d);
-    Serial.print("Last Updated: ");
-    Serial.println(response.last_updated);
-
-    // These fields will not come back if you do not request a currency
-    Serial.print("Price in requested currecy: ");
-    Serial.println(response.price_currency);
-    Serial.print("24h Volume in requested currency: ");
-    Serial.println(response.volume_currency_24h);
-    Serial.print("Market Cap in requested currency: ");
-    Serial.println(response.market_cap_currency);
-
-
-  } else {
-    Serial.print("Error getting data: ");
-    Serial.println(response.error);
+		tft.drawBitmap(42,30,Bitcoin48,48,48,ST7735_GREEN);
+		tft.setCursor(30, 80);
+        tft.setTextSize(1);		
+        tft.println("Bitcoin price: ");
+		tft.setCursor(26, 93);
+        tft.setTextSize(2);
+        tft.println(price);
+        tft.setTextSize(1);
   }
-  Serial.println("---------------------------------");
+  else
+  {
+    tft.println("connection failed!]");
+    client.stop();
+  }
+  delay(10000);
 }
 
-void loop() {
-  unsigned long timeNow = millis();
-  if ((timeNow > api_due_time))  {
-    printTickerData("bitcoin");
-    printTickerData("ethereum");
-    printTickerData("dogecoin");
-    api_due_time = timeNow + api_mtbs;
-  }
-}
+
