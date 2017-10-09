@@ -42,8 +42,8 @@ static const unsigned char PROGMEM Bitcoin48[] = {
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC);
 
-const char* ssid = "Chou_Home";
-const char* password = "10201020";
+const char* ssid = "*******";
+const char* password = "*******";
 const char* host = "api.coindesk.com";
 
 int jsonIndex;
